@@ -77,8 +77,8 @@ stream = binance.BinanceStream()
 def on_depth(data):
     print("Depth update - ", data)
 
-    stream.close()
-
+    stream.remove_candlesticks("ETHBTC", "1m")
+    stream.remove_trades("ETHBTC")
 
 def on_kline(data):
     print("kline update - ", data)
