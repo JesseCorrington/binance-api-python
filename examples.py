@@ -72,7 +72,6 @@ print("Connection ok? ", binance.ping())
 
 def on_data(data):
     print("Depth update - ", data)
-    t2 = loop.create_task(stream.depth_start("LTCBTC"))
 
 stream = binance.BinanceStream(on_data)
 
@@ -80,8 +79,8 @@ stream = binance.BinanceStream(on_data)
 loop = asyncio.get_event_loop()
 
 
-t1 = loop.create_task(stream.depth_start("ETHBTC"))
-t2 = loop.create_task(stream.depth_start("BNBBTC"))
+t1 = loop.create_task(stream.add_depth("ETHBTC", on_data))
+t2 = loop.create_task(stream.add_depth("BNBBTC", on_data))
 
 loop.run_until_complete(t1)
 

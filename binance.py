@@ -424,24 +424,43 @@ class Account:
 class BinanceStream:
     def __init__(self, cb):
         self.cb = cb
-        self.end = False
-        self.__sockets = []
-        self.__running = False
 
-    async def run(self, url):
+        self.__open_sockets = set()
+
+    async def run(self, url, id, callback):
+        if id in self.__open_sockets:
+            print("Depth socket already opened for symbol: " + id)
+            # TODO: replace all prints with log calls
+            return
+
         async with websockets.connect(url) as socket:
-            self.__sockets.append(socket)
+            self.__open_sockets.add(id)
+
             print("added socket ", socket)
 
-            while True:
+            while id in self.__open_sockets:
                 data = await socket.recv()
+                callback(data)
                 await(asyncio.sleep(1))
-                self.cb(data)
 
-                if self.end:
-                    self.end = False
-                    break
 
-    async def depth_start(self, symbol):
+    async def add_depth(self, symbol, callback):
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@depth"
-        await self.run(url)
+        await self.run(url, "depth_" + symbol, callback)
+
+    async def add_candlesticks(self, symbol, interval, callback):
+        url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@kline_" + interval
+        await self.run(url, "kline_" + symbol, callback)
+
+    async def add_trades(self, symbol, callback):
+        url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@aggTrades"
+        await self.run(url, "trades" + symbol, callback)
+
+    def remove_depth(self, symbol):
+        del self.__open_sockets["depth_" + symbol]
+
+    def remove_candlesticks(self, symbol):
+        del self.__open_sockets["kline_" + symbol]
+
+    def remove_trades(self, symbol):
+        del self.__open_sockets["trades_" + symbol]
