@@ -77,9 +77,6 @@ stream = binance.BinanceStream()
 def on_depth(data):
     print("Depth update - ", data)
 
-    stream.remove_candlesticks("ETHBTC", "1m")
-    stream.remove_trades("ETHBTC")
-
 def on_kline(data):
     print("kline update - ", data)
 
@@ -88,9 +85,9 @@ def on_trades(data):
 
 
 
-stream.add_depth("ETHBTC", on_depth)
-stream.add_candlesticks("ETHBTC", "1m", on_kline)
-stream.add_trades("ETHBTC", on_trades)
+stream.add_order_book("ETHBTC", on_depth)
+#stream.add_candlesticks("ETHBTC", "1m", on_kline)
+#stream.add_trades("ETHBTC", on_trades)
 
 
 asyncio.get_event_loop().run_forever()
