@@ -63,7 +63,7 @@ def geturl_json(url, query_params={}, sign=False, method="GET"):
             query_params["timestamp"] = timestamp()
 
             query = urllib.parse.urlencode(query_params)
-            query_params["signature"] = hmac.new(api_secret_key, query.encode("utf8"), digestmod=hashlib.sha256).hexdigest()
+            query_params["signature"] = hmac.new(api_secret_key.encode("utf8"), query.encode("utf8"), digestmod=hashlib.sha256).hexdigest()
 
         url += "?" + urllib.parse.urlencode(query_params)
 
@@ -72,7 +72,7 @@ def geturl_json(url, query_params={}, sign=False, method="GET"):
     req = urllib.request.Request(url, method=method)
 
     if sign:
-        
+
         req.add_header("X-MBX-APIKEY", api_key)
 
     json_ret = {}
