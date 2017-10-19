@@ -1,12 +1,6 @@
 import binance
 
 
-# Set api key and secret key (only needed for signed account requests)
-binance.set_api_key(
-    "<api_key>",
-    "<secret_key>"
-)
-
 # Turn logging on, its off by default
 binance.enable_logging(True)
 
@@ -42,6 +36,8 @@ print(binance.candlesticks("BNBBTC", "1m"))
 #    print(key, " - ", prices[key])
 
 
+
+
 print("Current ticker for order books")
 order_books = binance.ticker_order_books()
 
@@ -57,14 +53,17 @@ print(book)
 #print(binance.ticker_24hr("BNBBTC"))
 
 
-#print(binance.new_order("ETHBTC", "BUY", "LIMIT", .1, .01))
+# For signed requests we create an Account instance and give it the api key and secret
+account = binance.Account("<api_key>", "<secret_key>")
 
-#print(binance.query_order("ETHBTC", 100))
+print(account.new_order("ETHBTC", "BUY", "LIMIT", .1, .01))
 
+print(account.query_order("ETHBTC", 100))
 
-#print(binance.open_orders("ETHBTC"))
-#print(binance.all_orders("ETHBTC"))
+print(account.open_orders("ETHBTC"))
 
-#print(binance.account_info())
+print(account.all_orders("ETHBTC"))
 
-#print(binance.my_trades("ETHBTC"))
+print(account.account_info())
+
+print(account.my_trades("ETHBTC"))

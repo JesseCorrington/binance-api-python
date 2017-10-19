@@ -16,12 +16,13 @@ ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
 __URL_BASE = "https://www.binance.com/api/"
-__api_key = None
-__api_secret_key = None
 __log_enabled = False
 
 # TODO: https://www.binance.com/exchange/public/product
 
+
+def tets():
+    return None
 
 def __timestamp():
     return int(round(time.time() * 1000))
@@ -41,7 +42,7 @@ def __log(msg):
         print(msg)
 
 
-__URLS = {
+_URLS = {
     # General
     "ping": __v1_url("ping"),
     "time": __v1_url("time"),
@@ -69,7 +70,7 @@ OrderBookTicker = namedtuple("OrderBookTicker", "bid_price, bid_qty, ask_price, 
 CandleStick = namedtuple("CandleStick", "open_time open high low close volume close_time quote_asset_volume trade_count taker_buy_base_quote_vol taker_buy_quote_asset_vol")
 
 
-def __geturl_json(url, query_params={}, sign=False, method="GET"):
+def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, api_secret_key=None):
     if query_params is not None:
         for key in list(query_params.keys()):
             if query_params[key] is None:
@@ -79,7 +80,7 @@ def __geturl_json(url, query_params={}, sign=False, method="GET"):
             query_params["timestamp"] = __timestamp()
 
             query = urllib.parse.urlencode(query_params)
-            query_params["signature"] = hmac.new(__api_secret_key.encode("utf8"), query.encode("utf8"), digestmod=hashlib.sha256).hexdigest()
+            query_params["signature"] = hmac.new(api_secret_key.encode("utf8"), query.encode("utf8"), digestmod=hashlib.sha256).hexdigest()
 
         url += "?" + urllib.parse.urlencode(query_params)
 
@@ -89,7 +90,7 @@ def __geturl_json(url, query_params={}, sign=False, method="GET"):
 
     if sign:
 
-        req.add_header("X-MBX-APIKEY", __api_key)
+        req.add_header("X-MBX-APIKEY", api_key)
 
     json_ret = {}
 
@@ -107,20 +108,6 @@ def __geturl_json(url, query_params={}, sign=False, method="GET"):
 
 # Public API (no authentication required)
 
-def set_api_key(key, secret):
-    """ Set the API key and the API secret Key
-    If you don't have a key, log into binance.com and create one at https://www.binance.com/userCenter/createApi.html
-    Be sure to never commit your keys to source control
-
-    :param key: The API Key from your Binance account
-    :param secret: The API Secret Key from your Binance account (case sensitive)
-    :return: None
-    """
-
-# TODO:
-def set_receive_window(millis):
-    return None
-
 def enable_logging(enabled):
     """ Enable or Disable logging
     :param enabled: True to turn logging on, false to turn it off
@@ -136,7 +123,7 @@ def ping():
     :return: True if pint was success, False otherwise
     """
 
-    return __geturl_json(__URLS["ping"]) == {}
+    return _geturl_json(_URLS["ping"]) == {}
 
 
 def server_time():
@@ -144,7 +131,7 @@ def server_time():
     Get the current server time
     :return: Datetime object with the current server time
     """
-    data = __geturl_json(__URLS["time"])
+    data = _geturl_json(_URLS["time"])
     return datetime.datetime.fromtimestamp(data["serverTime"] / 1000.0)
 
 
@@ -156,7 +143,7 @@ def order_book(symbol, limit=None):
     :return: OrderBook tuple instance, containing the bids and asks
     """
 
-    data = __geturl_json(__URLS["depth"], {"symbol": symbol, "limit": limit})
+    data = _geturl_json(_URLS["depth"], {"symbol": symbol, "limit": limit})
 
     bids = []
     asks = []
@@ -195,7 +182,7 @@ def aggregate_trades(symbol, from_id=None, start_time=None, end_time=None, limit
         "endTime": end_time,
         "limit": limit}
 
-    trades = __geturl_json(__URLS["agg_trades"], params)
+    trades = _geturl_json(_URLS["agg_trades"], params)
 
     # convert price and quantity to decimals
     for trade in trades:
@@ -225,7 +212,7 @@ def candlesticks(symbol, interval, limit=None, start_time=None, end_time=None):
         "endTime": end_time
     }
 
-    candles = __geturl_json(__URLS["candlesticks"], params)
+    candles = _geturl_json(_URLS["candlesticks"], params)
     for i in range(len(candles)):
         candles[i] = candles[i][:-1]
         for j in range(len(candles[i])):
@@ -242,7 +229,7 @@ def ticker_prices():
     :return: a dict mapping the market symbols to prices
     """
 
-    coins = __geturl_json(__URLS["ticker_prices"])
+    coins = _geturl_json(_URLS["ticker_prices"])
 
     prices = {}
     for coin in coins:
@@ -255,7 +242,7 @@ def ticker_order_books():
     """ Gets the best price/quantity on the order book for all market symbols
     :return: an array of OrderBookTicker tuples (bid_price, bid_qty, ask_price, ask_qty)
     """
-    coins = __geturl_json(__URLS["ticker_books"])
+    coins = _geturl_json(_URLS["ticker_books"])
 
     book_tickers = {}
     for coin in coins:
@@ -278,7 +265,7 @@ def ticker_24hr(symbol):
     :return: a dict containing statistics for the last 24 hour period
     """
 
-    ticker = __geturl_json(__URLS["ticker_24hr"], {"symbol": symbol})
+    ticker = _geturl_json(_URLS["ticker_24hr"], {"symbol": symbol})
 
     for key in ticker:
         if isinstance(ticker[key], str):
@@ -289,132 +276,149 @@ def ticker_24hr(symbol):
 # TODO: we can maybe just make recv window a global param
 
 
-# Private account API, signing required
+# Private signed method access is provided through the Account class
+class Account:
+    def __init__(self, key, secret):
+        """ create a new accuont and set set the API key and the API secret Key
+        If you don't have a key, log into binance.com and create one at https://www.binance.com/userCenter/createApi.html
+        Be sure to never commit your keys to source control
 
-def new_order(symbol, side, type, quantity, price, new_client_order_id=None, stop_price=None, iceberg_qty=None):
-    """ Submit a new order
+        :param key: The API Key from your Binance account
+        :param secret: The API Secret Key from your Binance account (case sensitive)
+        """
+        self.__recv_window = None
+        self.__api_key = key
+        self.__api_secret_key = secret
+        return None
 
-    :param symbol: the market symbol (ie: BNBBTC)
-    :param side: "BUY" or "SELL"
-    :param type: "LIMIT" or "MARKET"
-    :param quantity: the amount to buy/sell
-    :param price: the price to buy/sell at
-    :param new_client_order_id: A unique id for the order. Automatically generated if not sent (optional)
-    :param stop_price: Used with stop orders (optional)
-    :param iceberg_qty: Used with iceberg orders (optional)
-    :return: # TODO:
-    """
+    def set_receive_window(self, window_millis):
+        """ specify the number of milliseconds a request must be processed within
+        before being rejected by the server. If not set, the default is 5000 ms
 
-    params = {
-        "symbol": symbol,
-        "side": side,
-        "type": type,
-        "timeInForce": "GTC",       # TODO: does this need config?
-        "quantity": quantity,
-        "price": price,
-        "newClientOrderId": new_client_order_id,
-        "stopPrice": stop_price,
-        "icebergQty": iceberg_qty,
-        #"recvWindow": recv_window # TODO:
-    }
+        :param window_millis: the number of milliseconds after timestamp the request is valid for
+        :return: None
+        """
 
-    return __geturl_json(__URLS["order"], params, True, "POST")
+        self.__recv_window = window_millis
 
+    def new_order(self, symbol, side, type, quantity, price, new_client_order_id=None, stop_price=None, iceberg_qty=None):
+        """ Submit a new order
 
-def query_order(symbol, order_id=None, orig_client_order_id=None):
-    """ Check an order's status
-    Either order_id or orig_client_order_id must be sent
+        :param symbol: the market symbol (ie: BNBBTC)
+        :param side: "BUY" or "SELL"
+        :param type: "LIMIT" or "MARKET"
+        :param quantity: the amount to buy/sell
+        :param price: the price to buy/sell at
+        :param new_client_order_id: A unique id for the order. Automatically generated if not sent (optional)
+        :param stop_price: Used with stop orders (optional)
+        :param iceberg_qty: Used with iceberg orders (optional)
+        :return: # TODO:
+        """
 
-    :param symbol: the market symbol (ie: BNBBTC)
-    :param order_id: the order id if orig_client_order_id isn't known
-    :param orig_client_order_id: the client order id, if order id isn't known
-    :return: a dict containing information about the order, if found
-    """
+        params = {
+            "symbol": symbol,
+            "side": side,
+            "type": type,
+            "timeInForce": "GTC",       # TODO: does this need config?
+            "quantity": quantity,
+            "price": price,
+            "newClientOrderId": new_client_order_id,
+            "stopPrice": stop_price,
+            "icebergQty": iceberg_qty,
+            "recvWindow": self.__recv_window
+        }
 
-    if order_id is None and orig_client_order_id is None:
-        raise Exception("param Error: must specify orderId or origClientOrderId")
+        return _geturl_json(_URLS["order"], params, True, "POST", api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
-    params = {
-        "symbol": symbol,
-        "orderId": order_id,
-        "origClientOrderId": orig_client_order_id,
-        #"recvWindow": recv_window
-    }
+    def query_order(self, symbol, order_id=None, orig_client_order_id=None):
+        """ Check an order's status
+        Either order_id or orig_client_order_id must be sent
 
-    return __geturl_json(__URLS["order"], params, True)
+        :param symbol: the market symbol (ie: BNBBTC)
+        :param order_id: the order id if orig_client_order_id isn't known
+        :param orig_client_order_id: the client order id, if order id isn't known
+        :return: a dict containing information about the order, if found
+        """
 
+        if order_id is None and orig_client_order_id is None:
+            raise Exception("param Error: must specify orderId or origClientOrderId")
 
-def cancel_order(symbol, order_id=None, orig_client_order_id=None, new_client_order_id=None):
-    """ Cancel an active order
-    Either order_id or orig_client_order_id must be sent
+        params = {
+            "symbol": symbol,
+            "orderId": order_id,
+            "origClientOrderId": orig_client_order_id,
+            "recvWindow": self.recv_window
+        }
 
-    :param symbol the market symbol (ie: BNBBTC):
-    :param order_id: the order id if orig_client_order_id isn't known
-    :param orig_client_order_id: the client order id, if order id isn't known
-    :param new_client_order_id: Used to uniquely identify this cancel. Automatically generated by default (optiona)
-    :return: a dict containing information about the cancelled order, if it existed
-    """
+        return _geturl_json(_URLS["order"], params, True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
-    if order_id is None and orig_client_order_id is None:
-        raise Exception("param Error: must specify orderId or origClientOrderId")
+    def cancel_order(self, symbol, order_id=None, orig_client_order_id=None, new_client_order_id=None):
+        """ Cancel an active order
+        Either order_id or orig_client_order_id must be sent
 
-    params = {
-        "symbol": symbol,
-        "orderId": order_id,
-        "origClientOrderId": orig_client_order_id,
-        "newClientOrderId": new_client_order_id,
-        #"recvWindow": recv_window
-    }
+        :param symbol: the market symbol (ie: BNBBTC):
+        :param order_id: the order id if orig_client_order_id isn't known
+        :param orig_client_order_id: the client order id, if order id isn't known
+        :param new_client_order_id: Used to uniquely identify this cancel. Automatically generated by default (optiona)
+        :return: a dict containing information about the cancelled order, if it existed
+        """
 
-    return __geturl_json(__URLS["order"], params, True, method="DELETE")
+        if order_id is None and orig_client_order_id is None:
+            raise Exception("param Error: must specify orderId or origClientOrderId")
 
+        params = {
+            "symbol": symbol,
+            "orderId": order_id,
+            "origClientOrderId": orig_client_order_id,
+            "newClientOrderId": new_client_order_id,
+            "recvWindow": self.recv_window
+        }
 
-def open_orders(symbol):
-    """ Gets all the open orders for a given symbol
+        return _geturl_json(_URLS["order"], params, True, method="DELETE", api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
-    :param symbol: the market symbol (ie: BNBBTC)
-    :return: an array of dicts containing info about all the open orders
-    """
+    def open_orders(self, symbol):
+        """ Gets all the open orders for a given symbol
 
-    return __geturl_json(__URLS["open_orders"], {"symbol": symbol}, True)
+        :param symbol: the market symbol (ie: BNBBTC)
+        :return: an array of dicts containing info about all the open orders
+        """
 
+        return _geturl_json(_URLS["open_orders"], {"symbol": symbol}, True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
-def all_orders(symbol, order_id=None, limit=None):
-    """ Get all account orders; active, canceled, or filled
+    def all_orders(self, symbol, order_id=None, limit=None):
+        """ Get all account orders; active, canceled, or filled
 
-    :param symbol: the market symbol (ie: BNBBTC)
-    :param order_id: if set, it will get orders >= that orderId. Otherwise most recent orders are returned (optional)
-    :param limit: the limit of orders to return (Default 500; max 500, optinal))
-    :return: an array of dicts containing info about all the open orders
-    """
-    params = {
-        "symbol": symbol,
-        "orderId": order_id,
-        "limit": limit
-    }
+        :param symbol: the market symbol (ie: BNBBTC)
+        :param order_id: if set, it will get orders >= that orderId. Otherwise most recent orders are returned (optional)
+        :param limit: the limit of orders to return (Default 500; max 500, optinal))
+        :return: an array of dicts containing info about all the open orders
+        """
+        params = {
+            "symbol": symbol,
+            "orderId": order_id,
+            "limit": limit
+        }
 
-    return __geturl_json(__URLS["all_orders"], params, True)
+        return _geturl_json(_URLS["all_orders"], params, True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
+    def account_info(self):
+        """ gets account information
+        :return: dict containing account information and all balances
+        """
+        return _geturl_json(_URLS["account"], sign=True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
-def account_info():
-    """ gets account information
-    :return: dict containing account information and all balances
-    """
-    return __geturl_json(__URLS["account"], sign=True)
+    def my_trades(self, symbol, limit=None, from_id=None):
+        """ Get trades for a specific account and symbol
 
+        :param symbol: te market symbol (ie: BNBBTC)
+        :param limit: the max number of trades to get (Default 500; max 500, optional)
+        :param from_id: TradeId to fetch from. Default gets most recent trades (optional)
+        :return: an array of dicts containing the trade info
+        """
+        params = {
+            "symbol": symbol,
+            "limit": limit,
+            "fromId": from_id
+        }
 
-def my_trades(symbol, limit=None, from_id=None):
-    """ Get trades for a specific account and symbol
-
-    :param symbol: te market symbol (ie: BNBBTC)
-    :param limit: the max number of trades to get (Default 500; max 500, optional)
-    :param from_id: TradeId to fetch from. Default gets most recent trades (optional)
-    :return: an array of dicts containing the trade info
-    """
-    params = {
-        "symbol": symbol,
-        "limit": limit,
-        "fromId": from_id
-    }
-
-    return __geturl_json(__URLS["my_trades"], params, True)
+        return _geturl_json(_URLS["my_trades"], params, True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
