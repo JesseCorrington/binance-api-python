@@ -1,19 +1,16 @@
 import urllib.request
 import urllib.parse
 import json
-import ssl
 import datetime
 import hmac
 import hashlib
 import time
+import asyncio
+import websockets
 from decimal import Decimal
 from collections import namedtuple
 
 
-# TODO: figure out how to make SSL work and get ride of this
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
 
 __URL_BASE = "https://www.binance.com/api/"
 __log_enabled = False
@@ -95,7 +92,7 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
     json_ret = {}
 
     try:
-        resp = urllib.request.urlopen(req, context=ctx)
+        resp = urllib.request.urlopen(req)
         json_ret = json.loads(resp.read())
     except urllib.error.HTTPError as e:
         # TODO: need to throw too, and need to get the json returned for better error msg
@@ -422,3 +419,44 @@ class Account:
         }
 
         return _geturl_json(_URLS["my_trades"], params, True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
+
+
+class BinanceStream:
+    def __init__(self, cb):
+        self.cb = cb
+        self.end = False
+        self.__sockets = []
+        self.__running = False
+
+    async def run(self):
+        if self.__running:
+            print("Stream already running")
+            return
+
+        self.__running = True
+
+        print("running sockets")
+
+        while True:
+            for socket in self.__sockets:
+                print(socket)
+
+                data = await socket.recv()
+                self.cb(data)
+
+                if self.end:
+                    self.end = False
+                    break
+
+    async def depth_start(self, symbol):
+        url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@depth"
+
+        async with websockets.connect(url) as socket:
+            self.__sockets.append(socket)
+            print("added socket ", socket)
+
+            #if not self.__running:
+            #    await self.run(url)
+
+    def depth_end(self):
+        self.end = True
