@@ -7,6 +7,8 @@ import hmac
 import hashlib
 import time
 from decimal import Decimal
+from collections import namedtuple
+
 
 # TODO: figure out how to make SSL work and get ride of this
 ctx = ssl.create_default_context()
@@ -57,6 +59,13 @@ __URLS = {
     "account": __v3_url("account"),
     "my_trades": __v3_url("myTrades")
 }
+
+
+OrderBook = namedtuple("OrderBook", "bids asks")
+
+CandleStick = namedtuple("CandleStick", "open_time open high low close volume close_time quote_asset_volume trade_count taker_buy_base_quote_vol taker_buy_quote_asset_vol")
+
+OrderBookTicker = namedtuple("OrderBookTicker", "bid_price, bid_qty, ask_price, ask_qty")
 
 
 # Public API
@@ -123,14 +132,17 @@ def server_time():
 def order_book(symbol, limit=None):
     data = geturl_json(__URLS["depth"], {"symbol": symbol, "limit": limit})
 
-    book = {"bids": [], "asks": []}
+    bids = []
+    asks = []
     for bid in data["bids"]:
         price_qty = (Decimal(bid[0]), Decimal(bid[1]))
-        book["bids"].append(price_qty)
+        bids.append(price_qty)
 
-    for ask in data["bids"]:
+    for ask in data["asks"]:
         price_qty = (Decimal(ask[0]), Decimal(ask[1]))
-        book["asks"].append(price_qty)
+        asks.append(price_qty)
+
+    book = OrderBook(bids, asks)
 
     return book
 
@@ -169,7 +181,7 @@ def candlesticks(symbol, interval, limit=None, start_time=None, end_time=None):
             if isinstance(candles[i][j], str):
                 candles[i][j] = Decimal(candles[i][j])
 
-        candles[i] = tuple(candles[i])
+        candles[i] = CandleStick(*candles[i])
 
     return candles
 
@@ -190,10 +202,12 @@ def ticker_order_books():
     book_tickers = {}
     for coin in coins:
         book_tickers[coin["symbol"]] = {
-            "bidPrice": Decimal(coin["bidPrice"]),
-            "bidQty": Decimal(coin["bidQty"]),
-            "askPrice": Decimal(coin["askPrice"]),
-            "askQty": Decimal(coin["askQty"])
+            OrderBookTicker(
+                Decimal(coin["bidPrice"]),
+                Decimal(coin["bidQty"]),
+                Decimal(coin["askPrice"]),
+                Decimal(coin["askQty"])
+            )
         }
 
     return book_tickers
@@ -204,7 +218,7 @@ def ticker_24hr(symbol):
 
     for key in ticker:
         if isinstance(ticker[key], str):
-            ticker[key] = float(ticker[key])
+            ticker[key] = Decimal(ticker[key])
 
     return ticker
 
