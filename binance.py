@@ -428,20 +428,14 @@ class BinanceStream:
         self.__sockets = []
         self.__running = False
 
-    async def run(self):
-        if self.__running:
-            print("Stream already running")
-            return
+    async def run(self, url):
+        async with websockets.connect(url) as socket:
+            self.__sockets.append(socket)
+            print("added socket ", socket)
 
-        self.__running = True
-
-        print("running sockets")
-
-        while True:
-            for socket in self.__sockets:
-                print(socket)
-
+            while True:
                 data = await socket.recv()
+                await(asyncio.sleep(1))
                 self.cb(data)
 
                 if self.end:
@@ -450,13 +444,4 @@ class BinanceStream:
 
     async def depth_start(self, symbol):
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@depth"
-
-        async with websockets.connect(url) as socket:
-            self.__sockets.append(socket)
-            print("added socket ", socket)
-
-            #if not self.__running:
-            #    await self.run(url)
-
-    def depth_end(self):
-        self.end = True
+        await self.run(url)
