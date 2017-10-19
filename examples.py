@@ -70,18 +70,27 @@ print("Connection ok? ", binance.ping())
 #print(account.my_trades("ETHBTC"))
 
 
-def on_data(data):
+
+
+stream = binance.BinanceStream()
+
+def on_depth(data):
     print("Depth update - ", data)
 
-stream = binance.BinanceStream(on_data)
+    stream.close()
 
 
-loop = asyncio.get_event_loop()
+def on_kline(data):
+    print("kline update - ", data)
+
+def on_trades(data):
+    print("trade update - ", data)
 
 
-t1 = loop.create_task(stream.add_depth("ETHBTC", on_data))
-t2 = loop.create_task(stream.add_depth("BNBBTC", on_data))
 
-loop.run_until_complete(t1)
+stream.add_depth("ETHBTC", on_depth)
+stream.add_candlesticks("ETHBTC", "1m", on_kline)
+stream.add_trades("ETHBTC", on_trades)
 
-loop.close()
+
+asyncio.get_event_loop().run_forever()

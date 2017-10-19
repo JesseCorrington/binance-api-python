@@ -422,10 +422,10 @@ class Account:
 
 
 class BinanceStream:
-    def __init__(self, cb):
-        self.cb = cb
-
+    def __init__(self):
         self.__open_sockets = set()
+
+        self.__pending_reads = {}
 
     async def run(self, url, id, callback):
         if id in self.__open_sockets:
@@ -438,29 +438,60 @@ class BinanceStream:
 
             print("added socket ", socket)
 
-            while id in self.__open_sockets:
-                data = await socket.recv()
+            while True:
+                recv_task = asyncio.Task(socket.recv())
+
+                self.__pending_reads[id] = recv_task
+
+                data = await recv_task
+
+                del self.__pending_reads[id]
+
                 callback(data)
-                await(asyncio.sleep(1))
+                await(asyncio.sleep(2))
+
+                if id not in self.__open_sockets:
+                    break
+
+            print("** socket closed, still open count: ", len(self.__open_sockets))
+            if len(self.__open_sockets) == 0:
+                print("** all closed, safe to shut down")
+                loop = asyncio.get_event_loop()
+                loop.stop()
 
 
-    async def add_depth(self, symbol, callback):
+    def add_depth(self, symbol, callback):
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@depth"
-        await self.run(url, "depth_" + symbol, callback)
 
-    async def add_candlesticks(self, symbol, interval, callback):
+        t = asyncio.Task(self.run(url, "depth_" + symbol, callback))
+
+    def add_candlesticks(self, symbol, interval, callback):
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@kline_" + interval
-        await self.run(url, "kline_" + symbol, callback)
 
-    async def add_trades(self, symbol, callback):
+        t = asyncio.Task(self.run(url, "kline_" + symbol, callback))
+
+    def add_trades(self, symbol, callback):
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@aggTrades"
-        await self.run(url, "trades" + symbol, callback)
 
+        t = asyncio.Task(self.run(url, "trades" + symbol, callback))
+
+
+    # TODO: removes need to kill pendin reads too
     def remove_depth(self, symbol):
         del self.__open_sockets["depth_" + symbol]
 
-    def remove_candlesticks(self, symbol):
+    def remove_candlesticks(self, symbol, interval):
         del self.__open_sockets["kline_" + symbol]
 
     def remove_trades(self, symbol):
         del self.__open_sockets["trades_" + symbol]
+
+    def close(self):
+        print("closing all streams")
+
+        for key in self.__pending_reads:
+            self.__pending_reads[key].cancel()
+
+        self.__open_sockets.clear()
+        loop = asyncio.get_event_loop()
+        loop.stop()
