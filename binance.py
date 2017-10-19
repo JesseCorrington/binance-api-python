@@ -6,7 +6,7 @@ import datetime
 import hmac
 import hashlib
 import time
-
+from decimal import Decimal
 
 # TODO: figure out how to make SSL work and get ride of this
 ctx = ssl.create_default_context()
@@ -107,11 +107,22 @@ def get_server_time():
 
 # symbol: required
 # limit: Default 100; max 100.
-def get_depth(symbol, limit=None):
-    return geturl_json(URLS["depth"], {"symbol": symbol, "limit": limit})
+def order_book(symbol, limit=None):
+    data = geturl_json(URLS["depth"], {"symbol": symbol, "limit": limit})
+
+    book = {"bids": [], "asks": []}
+    for bid in data["bids"]:
+        price_qty = (Decimal(bid[0]), Decimal(bid[1]))
+        book["bids"].append(price_qty)
+
+    for ask in data["bids"]:
+        price_qty = (Decimal(ask[0]), Decimal(ask[1]))
+        book["asks"].append(price_qty)
+
+    return book
 
 
-def get_aggtrades(symbol, from_id=None, start_time=None, end_time=None, limit=None):
+def aggregate_trades(symbol, from_id=None, start_time=None, end_time=None, limit=None):
     params = {
         "symbol": symbol,
         "fromId": from_id,
@@ -119,10 +130,17 @@ def get_aggtrades(symbol, from_id=None, start_time=None, end_time=None, limit=No
         "endTime": end_time,
         "limit": limit}
 
-    return geturl_json(URLS["agg_trades"], params)
+    trades = geturl_json(URLS["agg_trades"], params)
+
+    # convert price and quantity to decimals
+    for trade in trades:
+        trade["p"] = Decimal(trade["p"])
+        trade["q"] = Decimal(trade["q"])
+
+    return trades
 
 
-def get_candlesticks(symbol, interval, limit=None, start_time=None, end_time=None):
+def candlesticks(symbol, interval, limit=None, start_time=None, end_time=None):
     params = {
         "symbol": symbol,
         "interval": interval,
@@ -131,37 +149,51 @@ def get_candlesticks(symbol, interval, limit=None, start_time=None, end_time=Non
         "endTime": end_time
     }
 
-    return geturl_json(URLS["candlesticks"], params)
+    candles = geturl_json(URLS["candlesticks"], params)
+    for i in range(len(candles)):
+        candles[i] = candles[i][:-1]
+        for j in range(len(candles[i])):
+            if isinstance(candles[i][j], str):
+                candles[i][j] = Decimal(candles[i][j])
+
+        candles[i] = tuple(candles[i])
+
+    return candles
 
 
-def get_prices():
+def ticker_prices():
     coins = geturl_json(URLS["ticker_prices"])
 
     prices = {}
     for coin in coins:
-        prices[coin["symbol"]] = coin["price"]
+        prices[coin["symbol"]] = Decimal(coin["price"])
 
     return prices
 
 
-def get_book_tickers():
+def ticker_order_books():
     coins = geturl_json(URLS["ticker_books"])
 
     book_tickers = {}
     for coin in coins:
         book_tickers[coin["symbol"]] = {
-            "bidPrice": coin["bidPrice"],
-            "bidQty": coin["bidQty"],
-            "askPrice": coin["askPrice"],
-            "askQty": coin["askQty"]
+            "bidPrice": Decimal(coin["bidPrice"]),
+            "bidQty": Decimal(coin["bidQty"]),
+            "askPrice": Decimal(coin["askPrice"]),
+            "askQty": Decimal(coin["askQty"])
         }
 
     return book_tickers
 
 
-def get_prevday(symbol):
-    return geturl_json(URLS["ticker_24hr"], {"symbol": symbol})
+def ticker_24hr(symbol):
+    ticker = geturl_json(URLS["ticker_24hr"], {"symbol": symbol})
 
+    for key in ticker:
+        if isinstance(ticker[key], str):
+            ticker[key] = float(ticker[key])
+
+    return ticker
 
 # TODO: we can maybe just make recv window a global param
 
