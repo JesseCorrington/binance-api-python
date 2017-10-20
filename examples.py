@@ -85,8 +85,8 @@ def on_trades(data):
 
 
 
-stream.add_order_book("ETHBTC", on_depth)
-#stream.add_candlesticks("ETHBTC", "1m", on_kline)
+#stream.add_order_book("ETHBTC", on_depth)
+stream.add_candlesticks("ETHBTC", "1m", on_kline)
 #stream.add_trades("ETHBTC", on_trades)
 
 

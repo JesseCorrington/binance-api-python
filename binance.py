@@ -426,6 +426,7 @@ class BinanceStream:
         self.__open_sockets = set()
         self.__pending_reads = {}
         self.__order_books = {}
+        self.__candlesticks = {}
 
     async def __run(self, url, id, callback):
         if id in self.__open_sockets:
@@ -445,10 +446,16 @@ class BinanceStream:
                 data = json.loads(data)
                 del self.__pending_reads[id]
 
-                # TODO: we need to start by getting the initial order book
+                # TODO: we need to start by getting the initial order book, candles, and trades?
 
+                symbol = data["s"]
                 if id.find("depth") == 0:
-                    self.__update_order_book(data["s"], data)
+                    self.__update_order_book(symbol, data)
+                elif id.find("kline") == 0:
+                    self.__candlesticks[symbol].append(data["k"])
+                elif id.find("trades") == 0:
+                    # TODO: implement
+                    raise("Not implemented error")
 
                 callback(data)
                 await(asyncio.sleep(2))
@@ -481,8 +488,8 @@ class BinanceStream:
         :param symbol: the market symbol (ie: BNBBTC)
         :param callback: a function to call when new data comes in
         """
-        self.__order_books[symbol] = {"bids": {}, "asks": {}}
 
+        self.__order_books[symbol] = {"bids": {}, "asks": {}}
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@depth"
         asyncio.Task(self.__run(url, "depth_" + symbol, callback))
 
@@ -492,8 +499,10 @@ class BinanceStream:
         :param interval: one of (1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M)
         :param callback: a function to call when new data comes in
         """
+
+        self.__candlesticks[symbol] = []
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@kline_" + interval
-        asyncio.Task(self.__run(url, "kline_" + symbol + str(interval), callback))
+        asyncio.Task(self.__run(url, "kline_" + symbol + "_" + str(interval), callback))
 
     def add_trades(self, symbol, callback):
         """ Open an aggregated trades stream
@@ -507,6 +516,7 @@ class BinanceStream:
         """ Close an order book stream
         :param symbol: the market symbol (ie: BNBBTC)
         """
+        del self.__order_books[symbol]
         self.__close("depth_" + symbol)
 
     def remove_candlesticks(self, symbol, interval):
@@ -514,7 +524,9 @@ class BinanceStream:
         :param symbol: the market symbol (ie: BNBBTC)
         :param interval: one of (1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M)
         """
-        self.__close("kline_" + symbol + str(interval))
+
+        del self.__candlesticks[symbol]
+        self.__close("kline_" + symbol + "_" + str(interval))
 
     def remove_trades(self, symbol):
         """ Close a trades stream
