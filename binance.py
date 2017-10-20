@@ -80,7 +80,7 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
 
         url += "?" + urllib.parse.urlencode(query_params)
 
-    _log("GET: " + url)
+    _log(method + ": " + url)
 
     req = urllib.request.Request(url, method=method)
 
@@ -105,7 +105,6 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
 def enable_logging(enabled):
     """ Enable or Disable logging
     :param enabled: True to turn logging on, false to turn it off
-    :return: None
     """
 
     global __log_enabled
@@ -292,7 +291,6 @@ class Account:
         before being rejected by the server. If not set, the default is 5000 ms
 
         :param window_millis: the number of milliseconds after timestamp the request is valid for
-        :return: None
         """
 
         self.__recv_window = window_millis
@@ -429,6 +427,7 @@ class Streamer:
         self.__user_listen_key = ""
         self.__api_key = ""
         self.__keep_alive_task = None
+        self.__keep_alive_timer = None
 
     async def __run(self, url, id, callback):
         if id in self.__open_sockets:
@@ -486,6 +485,11 @@ class Streamer:
                 del asks[price]
 
     def start_user(self, api_key, callback):
+        """ Start the user data stream. After it's open, it will automatically send a keep alive request every 30 seconds
+        :param api_key:
+        :param callback: function to call when new user data comes in
+        """
+
         self.__api_key = api_key
 
         data = _geturl_json(_URLS["user_data_stream"], method="POST", api_key=api_key)
@@ -493,22 +497,29 @@ class Streamer:
         stream_url = "wss://stream.binance.com: 9443/ws/" + self.__user_listen_key
 
         asyncio.Task(self.__run(stream_url, "user_" + self.__user_listen_key, callback))
-        self.__keep_alive_task = asyncio.Task(self.__keep_alive_user())
+        self.__keep_alive_task = asyncio.Task(self.__keep_alive_user(callback))
 
-    async def __keep_alive_user(self):
+    async def __keep_alive_user(self, callback):
         while True:
             _log("User data stream keep alive heartbeat")
 
             _geturl_json(_URLS["user_data_stream"], {"listenKey": self.__user_listen_key}, method="PUT", api_key=self.__api_key)
-            await(asyncio.sleep(2))
+            self.__keep_alive_timer = await(asyncio.sleep(30))
+            callback("keepalive")
 
     def close_user(self):
+        """ Close the user data stream
+        """
         _log("Closing user data stream")
 
         self.__keep_alive_task.cancel()
-        _geturl_json(_URLS["user_data_stream"], {"listenKey": self.__user_listen_key}, method="DELETE", api_key=self.__api_key)
+        self.__keep_alive_timer.cancel()
         self.__close("user_" + self.__user_listen_key)
+        _geturl_json(_URLS["user_data_stream"], {"listenKey": self.__user_listen_key}, method="DELETE", api_key=self.__api_key)
 
+        self.__user_listen_key = ""
+        self.__api_key = ""
+        self.__keep_alive_task = None
 
     def add_order_book(self, symbol, callback):
         """ Open an order book stream
@@ -563,12 +574,15 @@ class Streamer:
         self.__close("trades_" + symbol)
 
     def __close(self, id):
+        _log("Closing stream: " + id)
+
         if id not in self.__open_sockets:
             _log("Can't close stream, not open")
             return
 
         self.__open_sockets.remove(id)
         self.__pending_reads[id].cancel()
+        del self.__pending_reads[id]
 
         _log("Stream closed: ", id)
 
