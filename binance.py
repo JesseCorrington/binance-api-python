@@ -14,7 +14,6 @@ from collections import namedtuple
 __URL_BASE = "https://www.binance.com/api/"
 __log_enabled = False
 
-# TODO: https://www.binance.com/exchange/public/product
 
 
 def tets():
@@ -52,6 +51,7 @@ _URLS = {
     "ticker_24hr": __v1_url("/ticker/24hr"),
 
     # Account
+    "user_data_stream": __v1_url("userDataStream"),
     "order": __v3_url("order"),
     "open_orders": __v3_url("openOrders"),
     "all_orders": __v3_url("allOrders"),
@@ -84,8 +84,7 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
 
     req = urllib.request.Request(url, method=method)
 
-    if sign:
-
+    if api_key:
         req.add_header("X-MBX-APIKEY", api_key)
 
     json_ret = {}
@@ -421,19 +420,22 @@ class Account:
         return _geturl_json(_URLS["my_trades"], params, True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
 
 
-class BinanceStream:
+class Streamer:
     def __init__(self):
         self.__open_sockets = set()
         self.__pending_reads = {}
         self.__order_books = {}
         self.__candlesticks = {}
+        self.__user_listen_key = ""
+        self.__api_key = ""
+        self.__keep_alive_task = None
 
     async def __run(self, url, id, callback):
         if id in self.__open_sockets:
             _log("Socket already opened for id: " + id)
             return
 
-        _log("Opening stream - " + id)
+        _log("Opening stream - " + url)
 
         async with websockets.connect(url) as socket:
             self.__open_sockets.add(id)
@@ -458,7 +460,7 @@ class BinanceStream:
                     raise("Not implemented error")
 
                 callback(data)
-                await(asyncio.sleep(2))
+                await(asyncio.sleep(.1))
 
     def __update_order_book(self, symbol, changes):
         bids = changes["b"]
@@ -482,6 +484,31 @@ class BinanceStream:
                 asks[price] = quantity
             elif price in asks:
                 del asks[price]
+
+    def start_user(self, api_key, callback):
+        self.__api_key = api_key
+
+        data = _geturl_json(_URLS["user_data_stream"], method="POST", api_key=api_key)
+        self.__user_listen_key = data["listenKey"]
+        stream_url = "wss://stream.binance.com: 9443/ws/" + self.__user_listen_key
+
+        asyncio.Task(self.__run(stream_url, "user_" + self.__user_listen_key, callback))
+        self.__keep_alive_task = asyncio.Task(self.__keep_alive_user())
+
+    async def __keep_alive_user(self):
+        while True:
+            _log("User data stream keep alive heartbeat")
+
+            _geturl_json(_URLS["user_data_stream"], {"listenKey": self.__user_listen_key}, method="PUT", api_key=self.__api_key)
+            await(asyncio.sleep(2))
+
+    def close_user(self):
+        _log("Closing user data stream")
+
+        self.__keep_alive_task.cancel()
+        _geturl_json(_URLS["user_data_stream"], {"listenKey": self.__user_listen_key}, method="DELETE", api_key=self.__api_key)
+        self.__close("user_" + self.__user_listen_key)
+
 
     def add_order_book(self, symbol, callback):
         """ Open an order book stream
