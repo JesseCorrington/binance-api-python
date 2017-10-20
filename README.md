@@ -131,20 +131,20 @@ account.set_receive_window(3000)
 ### Place a new limit order
 ```python
 # a buy limit order
-account.new_order("ETHBTC", "BUY", "LIMIT", 0.0513605, 0.01)
+account.new_order("ETHBTC", "BUY", "LIMIT", 0.0513605, 4)
 
 # or a sell limit order
-account.new_order("ETHBTC", "SELL", "LIMIT", 0.0513605, 0.01)
+account.new_order("ETHBTC", "SELL", "LIMIT", 0.0513605, 4)
 ```
 
 
 ### Place a new market order
 ```python
 # a buy market order
-account.new_order("ETHBTC", "BUY", "MARKET", 0.0513605)
+account.new_order("ETHBTC", "BUY", "MARKET", 4)
 
 # or a sell market order
-account.new_order("ETHBTC", "SELL", "MARKET", 0.0513605)
+account.new_order("ETHBTC", "SELL", "MARKET", 4)
 ```
 
 
@@ -181,4 +181,73 @@ info = account.account_info()
 ### Get trades for a specific account and symbol
 ```python
 trades = account.my_trades("ETHBTC")
+```
+
+
+## Websocket Data Streams
+In addition to the requests above for getting market data, you can also stream
+the order books, candlesticks, and aggregated trades.
+
+
+### Create a new stream
+You just need to create a single stream object, and then you can add ass many data sources to it as you need.
+```python
+stream = binance.BinanceStream()
+```
+
+
+### Add an order book data stream
+```python
+def on_order_book(data):
+    print("order book update - ", data)
+
+stream.add_order_book("ETHBTC", on_order_book)
+```
+
+
+### Add a candlestick data stream
+```python
+def on_candlestick(data):
+    print("candlestick update - ", data)
+
+stream.add_candlesticks("ETHBTC", "1m", on_candlestick)
+```
+
+
+### Add a trades data stream
+```python
+def on_trades(data):
+    print("trade update - ", data)
+
+stream.add_trades("ETHBTC", on_trades)
+```
+
+
+### Remove an order book data stream
+```python
+stream.remove_order_book("ETHBTC")
+```
+
+
+### Remove a candlestick data stream
+```python
+stream.remove_candlesticks("ETHBTC", "1m")
+```
+
+
+### Remove a trades data stream
+```python
+stream.remove_trades("ETHBTC")
+```
+
+
+### Close all data streams
+```python
+stream.close_all()
+```
+
+
+### Run until all data streams are closed
+```python
+asyncio.get_event_loop().run_forever()
 ```
