@@ -32,7 +32,7 @@ def __v3_url(endpoint):
     return __URL_BASE + "v3/" + endpoint
 
 
-def __log(msg):
+def _log(msg):
     global __log_enabled
     if __log_enabled:
         print(msg)
@@ -80,7 +80,7 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
 
         url += "?" + urllib.parse.urlencode(query_params)
 
-    __log("GET: " + url)
+    _log("GET: " + url)
 
     req = urllib.request.Request(url, method=method)
 
@@ -94,9 +94,8 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
         resp = urllib.request.urlopen(req)
         json_ret = json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        # TODO: need to throw too, and need to get the json returned for better error msg
-        __log(e.read())
-        __log(e, " - ", url)
+        data = e.read()
+        raise(e + " - " + url + data)
 
     return json_ret
 
@@ -112,6 +111,8 @@ def enable_logging(enabled):
 
     global __log_enabled
     __log_enabled = enabled
+
+    print("Logging", "enabled" if enabled else "disabled")
 
 
 def ping():
@@ -315,7 +316,7 @@ class Account:
             "symbol": symbol,
             "side": side,
             "type": type,
-            "timeInForce": "GTC",       # TODO: does this need config?
+            "timeInForce": "GTC",
             "quantity": quantity,
             "price": price,
             "newClientOrderId": new_client_order_id,
@@ -423,16 +424,15 @@ class Account:
 class BinanceStream:
     def __init__(self):
         self.__open_sockets = set()
-
         self.__pending_reads = {}
-
         self.__order_books = {}
 
     async def __run(self, url, id, callback):
         if id in self.__open_sockets:
-            print("Depth socket already opened for symbol: " + id)
-            # TODO: replace all prints with log calls
+            _log("Socket already opened for id: " + id)
             return
+
+        _log("Opening stream - " + id)
 
         async with websockets.connect(url) as socket:
             self.__open_sockets.add(id)
@@ -475,8 +475,6 @@ class BinanceStream:
                 asks[price] = quantity
             elif price in asks:
                 del asks[price]
-
-        print(self.__order_books[symbol])
 
     def add_order_book(self, symbol, callback):
         """ Open an order book stream
@@ -527,17 +525,19 @@ class BinanceStream:
 
     def __close(self, id):
         if id not in self.__open_sockets:
-            print("Can't close stream, not open")
+            _log("Can't close stream, not open")
             return
 
         self.__open_sockets.remove(id)
         self.__pending_reads[id].cancel()
 
+        _log("Stream closed: ", id)
+
     def close_all(self):
         """
         close all the streams and stop the event loop
         """
-        print("closing all streams")
+        _log("closing all streams")
 
         for key in self.__pending_reads:
             self.__pending_reads[key].cancel()
