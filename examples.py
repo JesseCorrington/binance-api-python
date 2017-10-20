@@ -58,9 +58,11 @@ print(last_24hr)
 
 
 # For signed requests we create an Account instance and give it the api key and secret
-#account = binance.Account("<api_key>", "<secret_key>")
+account = binance.Account("<api_key>", "<secret_key>")
 
-#rint(account.new_order("ETHBTC", "BUY", "LIMIT", .1, .01))
+account.set_receive_window(3000)
+
+account.new_order("ETHBTC", "BUY", "LIMIT", .1, 0.01)
 
 #print(account.query_order("ETHBTC", 100))
 

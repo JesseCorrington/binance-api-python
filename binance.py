@@ -298,7 +298,7 @@ class Account:
 
         self.__recv_window = window_millis
 
-    def new_order(self, symbol, side, type, quantity, price, new_client_order_id=None, stop_price=None, iceberg_qty=None):
+    def new_order(self, symbol, side, type, quantity, price=0, new_client_order_id=None, stop_price=None, iceberg_qty=None):
         """ Submit a new order
 
         :param symbol: the market symbol (ie: BNBBTC)
