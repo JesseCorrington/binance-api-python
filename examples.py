@@ -64,15 +64,17 @@ account.set_receive_window(3000)
 
 account.new_order("ETHBTC", "BUY", "LIMIT", .1, 0.01)
 
-#print(account.query_order("ETHBTC", 100))
+print(account.query_order("ETHBTC", 100))
 
-#print(account.open_orders("ETHBTC"))
+account.open_orders("ETHBTC")
 
-#print(account.all_orders("ETHBTC"))
+account.all_orders("ETHBTC")
 
-#print(account.account_info())
+info = account.account_info()
+print(info)
 
-#print(account.my_trades("ETHBTC"))
+trades = account.my_trades("ETHBTC")
+print(trades)
 
 
 

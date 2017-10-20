@@ -4,24 +4,24 @@ It supports all public endpoints, signed endpoints, and websocket data streams.
 All numeric types returned from the API are converted to Decimal, to prevent
 floating point innacuracies, since we're dealing with financial data.
 
-#### Installation
+### Installation
 Simply copy binance.py into your project and import it.
 You will also need to install the websockets library
 ```
 pip install websockets  
 ```
 
-# Public Endpoints
+## Public Endpoints
 These don't require setting up your API key and are all static methods
 
-#### Turn logging on or off
+### Turn logging on or off
 ```python
 import binance
 binance.enable_logging(True)
 binance.enable_logging(False)
 ```
 
-## Ping Binance.com to see if it's online
+### Ping Binance.com to see if it's online
 ```python
 binance.ping()
 ```
@@ -31,7 +31,7 @@ True
 ```
 
 
-## Get the server time
+### Get the server time
 ```python
 binance.server()
 ```
@@ -41,7 +41,7 @@ binance.server()
 ```
 
 
-## Get the order book for a specific symbol
+### Get the order book for a specific symbol
 ```python
 order_book = binance.order_book("BNBBTC", 5)
 print(order_book)
@@ -52,23 +52,23 @@ OrderBook(bids=[(Decimal('0.00020759'), Decimal('97.00000000')), (Decimal('0.000
 ```
 
 
-## Get aggregated trades
+### Get aggregated trades
 ```python
 trades = binance.aggregate_trades("BNBBTC", limit=5)
 print(trades)
 ```
-##### Output
+#### Output
 ```python
 [{'a': 1367857, 'p': Decimal('0.00020752'), 'q': Decimal('76.00000000'), 'f': 1501629, 'l': 1501629, 'T': 1508527146843, 'm': True, 'M': True}, {'a': 1367858, 'p': Decimal('0.00020795'), 'q': Decimal('16.00000000'), 'f': 1501630, 'l': 1501630, 'T': 1508527182319, 'm': False, 'M': True}, {'a': 1367859, ...
 ```
 
 
-## Get candlesicks
+### Get candlesicks
 ```python
 candles = binance.candlesticks("BNBBTC", "1m")
 print(candles)
 ```
-##### Output
+#### Output
 ```python
 [CandleStick(open_time=1508497320000, open=Decimal('0.00022551'), high=Decimal('0.00022551'), low=Decimal('0.00022551'), close=Decimal('0.00022551'), volume=Decimal('14.00000000'), close_time=1508497379999, quote_asset_volume=Decimal('0.00315714'), trade_count=1, taker_buy_base_quote_vol=Decimal('0E-8'), taker_buy_quote_asset_vol=Decimal('0E-8')), CandleStick(open_time=1508497380000,...
 ```
@@ -85,7 +85,7 @@ print(prices)
 ```
 
 
-## Get the top order book entry for all markets
+### Get the top order book entry for all markets
 ```python
 print("Current ticker for order books")
 order_books = binance.ticker_order_books()
@@ -98,7 +98,7 @@ print(order_books["ETHBTC"])
 ```
 
 
-## Gets the 24 hour price change statistics for a specific symbol
+### Gets the 24 hour price change statistics for a specific symbol
 ```python
 last_24hr = binance.ticker_24hr("BNBBTC")
 print(last_24hr)
@@ -109,17 +109,7 @@ print(last_24hr)
 ```
 
 
-###
-```python
-
-```
-#### Output
-```python
-
-```
-
-
-# Signed Endpoints
+## Signed Endpoints
 These require using an API key and API secret for authentication.
 If you don't have a key, log into binance.com and create one [here](https://www.binance.com/userCenter/createApi.html]).
 Be sure to never commit your keys to source control.
@@ -155,4 +145,40 @@ account.new_order("ETHBTC", "BUY", "MARKET", 0.0513605)
 
 # or a sell market order
 account.new_order("ETHBTC", "SELL", "MARKET", 0.0513605)
+```
+
+
+### Query an order
+```python
+account.query_order("ETHBTC", <order-id>)
+```
+
+
+### Cancel an order
+```python
+account.cancel_order("ETHBTC", <order-id>)
+```
+
+
+### Get all open orders for a given symbol
+```python
+account.open_orders("ETHBTC")
+```
+
+
+### Get all account orders; active, canceled, or filled
+```python
+account.all_orders("ETHBTC")
+```
+
+
+### Get your account info, including balances for all symbols
+```python
+info = account.account_info()
+```
+
+
+### Get trades for a specific account and symbol
+```python
+trades = account.my_trades("ETHBTC")
 ```
