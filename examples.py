@@ -9,10 +9,11 @@ binance.enable_logging(True)
 print("Connection ok? ", binance.ping())
 
 # Get the current server time in milliseconds
-#print("Server time: ", binance.server_time())
+print("Server time: ", binance.server_time())
 
 # Get the order book for a symbol with max 5 entries
-#order_book = binance.order_book("BNBBTC", 5)
+order_book = binance.order_book("BNBBTC", 5)
+print(order_book)
 
 # TODO: sorting seems wrong here
 #print("Order book for BNB-BTC")
@@ -26,21 +27,22 @@ print("Connection ok? ", binance.ping())
 
 
 # Get aggregated trades
-#print(binance.aggregate_trades("BNBBTC"))
+print(binance.aggregate_trades("BNBBTC", limit=5))
 
-#print(binance.candlesticks("BNBBTC", "1m"))
+candles = binance.candlesticks("BNBBTC", "1m")
+print(candles)
 
 # Ticker operations
 #print("Current ticker prices")
-#prices = binance.ticker_prices()
-#for key in prices:
-#    print(key, " - ", prices[key])
+prices = binance.ticker_prices()
+print(prices)
 
 
 
 
-#print("Current ticker for order books")
-#order_books = binance.ticker_order_books()
+print("Current ticker for order books")
+order_books = binance.ticker_order_books()
+print(order_books["ETHBTC"])
 
 #print("Order book ticker for ETHBTC")
 #book = order_books["ETHBTC"]
@@ -51,7 +53,8 @@ print("Connection ok? ", binance.ping())
 #print(book)
 
 
-#print(binance.ticker_24hr("BNBBTC"))
+last_24hr = binance.ticker_24hr("BNBBTC")
+print(last_24hr)
 
 
 # For signed requests we create an Account instance and give it the api key and secret
