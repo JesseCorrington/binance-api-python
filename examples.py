@@ -84,6 +84,11 @@ def account():
 def user_stream():
     stream = binance.Streamer()
 
+    async def stop():
+        await(asyncio.sleep(5))
+        stream.close_all()
+        asyncio.get_event_loop().stop()
+
     def on_user_data(data):
         print("new user data: ", data)
         if data == "keepalive":
@@ -92,13 +97,21 @@ def user_stream():
 
     stream.start_user(api_key, on_user_data)
 
+    asyncio.Task(stop())
+
     asyncio.get_event_loop().run_forever()
 
 def data_streams():
     stream = binance.Streamer()
 
+    async def stop():
+        await(asyncio.sleep(5))
+        stream.close_all()
+        asyncio.get_event_loop().stop()
+
     def on_order_book(data):
         print("order book update - ", data)
+        print("full orderbook - ", stream.get_order_book("ETHBTC"))
 
     stream.add_order_book("ETHBTC", on_order_book)
 
@@ -114,11 +127,12 @@ def data_streams():
 
     stream.add_trades("ETHBTC", on_trades)
 
+    asyncio.Task(stop())
 
     asyncio.get_event_loop().run_forever()
 
 
-#market_data()
+market_data()
 #account()
-#user_stream()
+user_stream()
 data_streams()

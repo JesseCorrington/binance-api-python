@@ -447,8 +447,6 @@ class Streamer:
                 data = json.loads(data)
                 del self.__pending_reads[id]
 
-                # TODO: we need to start by getting the initial order book, candles, and trades?
-
                 symbol = data["s"]
                 if id.find("depth") == 0:
                     self.__update_order_book(symbol, data)
@@ -462,11 +460,20 @@ class Streamer:
                 await(asyncio.sleep(.1))
 
     def __update_order_book(self, symbol, changes):
+        book = self.__order_books[symbol]
+
+        if len(book["bids"]) == 0 and len(book["asks"]) == 0:
+            initial_orders = order_book(symbol)
+            for (p, q) in initial_orders.bids:
+                book["bids"][p] = q
+            for (p, q) in initial_orders.asks:
+                book["bids"][p] = q
+
         bids = changes["b"]
         for bid in bids:
             price = Decimal(bid[0])
             quantity = Decimal(bid[1])
-            bids = self.__order_books[symbol]["bids"]
+            bids = book["bids"]
 
             if quantity > 0:
                 bids[price] = quantity
@@ -477,7 +484,7 @@ class Streamer:
         for ask in asks:
             price = Decimal(ask[0])
             quantity = Decimal(ask[1])
-            asks = self.__order_books[symbol]["asks"]
+            asks = book["asks"]
 
             if quantity > 0:
                 asks[price] = quantity
@@ -530,6 +537,9 @@ class Streamer:
         self.__order_books[symbol] = {"bids": {}, "asks": {}}
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@depth"
         asyncio.Task(self.__run(url, "depth_" + symbol, callback))
+
+    def get_order_book(self, symbol):
+        return self.__order_books[symbol]
 
     def add_candlesticks(self, symbol, interval, callback):
         """ Open a candlestick stream
