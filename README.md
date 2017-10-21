@@ -196,6 +196,20 @@ stream = binance.BinanceStream()
 ```
 
 
+### Open the user data stream
+After it's open, it will automatically send a keep alive request every 30 seconds.
+```python
+def on_user_data(data):
+    print("new user data: ", data)
+
+stream.start_user("<api-key>", on_user_data)
+```
+
+### Close the user data stream
+```python
+stream.close_user()
+```
+
 ### Add an order book data stream
 ```python
 def on_order_book(data):
@@ -244,10 +258,4 @@ stream.remove_trades("ETHBTC")
 ### Close all data streams
 ```python
 stream.close_all()
-```
-
-
-### Run until all data streams are closed
-```python
-asyncio.get_event_loop().run_forever()
 ```

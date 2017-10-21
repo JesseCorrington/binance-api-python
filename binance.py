@@ -513,7 +513,6 @@ class Streamer:
 
             _geturl_json(_URLS["user_data_stream"], {"listenKey": self.__user_listen_key}, method="PUT", api_key=self.__api_key)
             self.__keep_alive_timer = await(asyncio.sleep(30))
-            callback("keepalive")
 
     def close_user(self):
         """ Close the user data stream

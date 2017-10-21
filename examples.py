@@ -104,9 +104,6 @@ def user_stream():
 
     def on_user_data(data):
         print("new user data: ", data)
-        if data == "keepalive":
-            stream.close_user()
-            asyncio.get_event_loop().stop()
 
     stream.start_user(api_key, on_user_data)
 
