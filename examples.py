@@ -10,6 +10,8 @@ api_key = ""
 api_secret_key = ""
 
 def market_data():
+    print("\nMarket data examples\n")
+
     # ping binance to see if it's online and verify we can hit it
     print("Connection ok? ", binance.ping())
 
@@ -60,19 +62,28 @@ def market_data():
 
 
 def account():
+    print("\nAccount data examples\n")
+
     # For signed requests we create an Account instance and give it the api key and secret
-    account = binance.Account("<api_key>", "<secret_key>")
+    account = binance.Account(api_key, api_secret_key)
 
-    account.set_receive_window(6000)
+    account.set_receive_window(5000)
 
-    account.new_order("ETHBTC", "BUY", "LIMIT", .1, 0.01)
+    new_order = account.new_order("ETHBTC", "BUY", "LIMIT", .1, 0.01)
+    new_order_id = new_order["orderId"]
+    print("new order id = ", new_order_id)
 
-    order = account.query_order("ETHBTC", 100)
+    order = account.query_order("ETHBTC", new_order_id)
     print(order)
 
-    account.open_orders("ETHBTC")
+    order = account.cancel_order("ETHBTC", new_order_id)
+    print(order)
 
-    account.all_orders("ETHBTC")
+    open_orders = account.open_orders("ETHBTC")
+    print(open_orders)
+
+    all_orders = account.all_orders("ETHBTC")
+    print(all_orders)
 
     info = account.account_info()
     print(info)
@@ -82,6 +93,8 @@ def account():
 
 
 def user_stream():
+    print("\nUser Stream examples\n")
+
     stream = binance.Streamer()
 
     async def stop():
@@ -102,6 +115,8 @@ def user_stream():
     asyncio.get_event_loop().run_forever()
 
 def data_streams():
+    print("\nData Stream examples\n")
+
     stream = binance.Streamer()
 
     async def stop():
@@ -133,6 +148,6 @@ def data_streams():
 
 
 market_data()
-#account()
+account()
 user_stream()
 data_streams()

@@ -74,7 +74,6 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
 
         if sign:
             query_params["timestamp"] = __timestamp()
-
             query = urllib.parse.urlencode(query_params)
             query_params["signature"] = hmac.new(api_secret_key.encode("utf8"), query.encode("utf8"), digestmod=hashlib.sha256).hexdigest()
 
@@ -94,7 +93,7 @@ def _geturl_json(url, query_params={}, sign=False, method="GET", api_key=None, a
         json_ret = json.loads(resp.read())
     except urllib.error.HTTPError as e:
         data = e.read()
-        raise(e + " - " + url + data)
+        raise Exception("Request Failed: " + str(data))
 
     return json_ret
 
@@ -268,8 +267,6 @@ def ticker_24hr(symbol):
 
     return ticker
 
-# TODO: we can maybe just make recv window a global param
-
 
 # Private signed method access is provided through the Account class
 class Account:
@@ -284,7 +281,7 @@ class Account:
         self.__recv_window = None
         self.__api_key = key
         self.__api_secret_key = secret
-        return None
+        self.__recv_window = None
 
     def set_receive_window(self, window_millis):
         """ specify the number of milliseconds a request must be processed within
@@ -306,7 +303,7 @@ class Account:
         :param new_client_order_id: A unique id for the order. Automatically generated if not sent (optional)
         :param stop_price: Used with stop orders (optional)
         :param iceberg_qty: Used with iceberg orders (optional)
-        :return: # TODO:
+        :return: new order id
         """
 
         params = {
@@ -341,7 +338,7 @@ class Account:
             "symbol": symbol,
             "orderId": order_id,
             "origClientOrderId": orig_client_order_id,
-            "recvWindow": self.recv_window
+            "recvWindow": self.__recv_window
         }
 
         return _geturl_json(_URLS["order"], params, True, api_key=self.__api_key, api_secret_key=self.__api_secret_key)
@@ -365,7 +362,7 @@ class Account:
             "orderId": order_id,
             "origClientOrderId": orig_client_order_id,
             "newClientOrderId": new_client_order_id,
-            "recvWindow": self.recv_window
+            "recvWindow": self.__recv_window
         }
 
         return _geturl_json(_URLS["order"], params, True, method="DELETE", api_key=self.__api_key, api_secret_key=self.__api_secret_key)
@@ -499,7 +496,7 @@ class Streamer:
 
         self.__api_key = api_key
 
-        data = _geturl_json(_URLS["user_data_stream"], method="POST", api_key=api_key)
+        data = _geturl_json(_URLS["user_data_stream"], {}, method="POST", api_key=api_key)
         self.__user_listen_key = data["listenKey"]
         stream_url = "wss://stream.binance.com: 9443/ws/" + self.__user_listen_key
 
@@ -539,6 +536,10 @@ class Streamer:
         asyncio.Task(self.__run(url, "depth_" + symbol, callback))
 
     def get_order_book(self, symbol):
+        """ Returns the currently cached order book
+        :param symbol: the market symbol (ie: BNBBTC)
+        :return: current order book data
+        """
         return self.__order_books[symbol]
 
     def add_candlesticks(self, symbol, interval, callback):
@@ -606,5 +607,4 @@ class Streamer:
             self.__pending_reads[key].cancel()
 
         self.__open_sockets.clear()
-        loop = asyncio.get_event_loop()
-        loop.stop()
+
