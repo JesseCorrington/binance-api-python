@@ -421,6 +421,7 @@ class Streamer:
         self.__pending_reads = {}
         self.__order_books = {}
         self.__candlesticks = {}
+        self.__trades = {}
         self.__user_listen_key = ""
         self.__api_key = ""
         self.__keep_alive_task = None
@@ -448,10 +449,13 @@ class Streamer:
                 if id.find("depth") == 0:
                     self.__update_order_book(symbol, data)
                 elif id.find("kline") == 0:
+                    if self.__candlesticks[symbol] == None:
+                        self.__candlesticks[symbol] = []
                     self.__candlesticks[symbol].append(data["k"])
                 elif id.find("trades") == 0:
-                    # TODO: implement
-                    raise("Not implemented error")
+                    if self.__trades[symbol] == None:
+                        self.__trades[symbol] = []
+                    self.__trades[symbol].append(data)
 
                 callback(data)
                 await(asyncio.sleep(.1))
@@ -553,6 +557,13 @@ class Streamer:
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@kline_" + interval
         asyncio.Task(self.__run(url, "kline_" + symbol + "_" + str(interval), callback))
 
+    def get_candlesticks(self, symbol):
+        """ Returns the currently cached candlesticks
+        :param symbol: the market symbol (ie: BNBBTC)
+        :return: current candlestick data
+        """
+        return self.__candlesticks[symbol]
+
     def add_trades(self, symbol, callback):
         """ Open an aggregated trades stream
         :param symbol: the market symbol (ie: BNBBTC)
@@ -560,6 +571,13 @@ class Streamer:
         """
         url = "wss://stream.binance.com:9443/ws/" + symbol.lower() + "@aggTrades"
         asyncio.Task(self.__run(url, "trades" + symbol, callback))
+
+    def get_trades(self, symbol):
+        """ Returns the currently cached trades
+        :param symbol: the market symbol (ie: BNBBTC)
+        :return: current trade data
+        """
+        return self.__trades[symbol]
 
     def remove_order_book(self, symbol):
         """ Close an order book stream

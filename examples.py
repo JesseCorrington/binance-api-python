@@ -125,14 +125,15 @@ def data_streams():
         asyncio.get_event_loop().stop()
 
     def on_order_book(data):
-        print("order book update - ", data)
+        print("order book canges - ", data)
         print("full orderbook - ", stream.get_order_book("ETHBTC"))
 
     stream.add_order_book("ETHBTC", on_order_book)
 
 
     def on_candlestick(data):
-        print("candlestick update - ", data)
+        print("new candlesticks - ", data)
+        print("all candlesticks- ", stream.get_candlesticks("ETHBTC"))
 
     stream.add_candlesticks("ETHBTC", "1m", on_candlestick)
 

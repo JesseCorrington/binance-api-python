@@ -6,7 +6,7 @@ floating point innacuracies, since we're dealing with financial data.
 
 ### Installation
 Simply copy binance.py into your project and import it.
-You will also need to install the websockets library
+You will also need to install the websockets library. Python 3.6 or newer is required.
 ```
 pip install websockets  
 ```
