@@ -33,7 +33,7 @@ True
 
 ### Get the server time
 ```python
-binance.server()
+binance.server_time()
 ```
 #### Output
 ```python
@@ -87,7 +87,6 @@ print(prices)
 
 ### Get the top order book entry for all markets
 ```python
-print("Current ticker for order books")
 order_books = binance.ticker_order_books()
 print(order_books["ETHBTC"])
 ```
@@ -98,7 +97,7 @@ print(order_books["ETHBTC"])
 ```
 
 
-### Gets the 24 hour price change statistics for a specific symbol
+### Get the 24 hour price change statistics for a specific symbol
 ```python
 last_24hr = binance.ticker_24hr("BNBBTC")
 print(last_24hr)
@@ -228,7 +227,7 @@ stream.add_candlesticks("ETHBTC", "1m", on_candlestick)
 ```
 
 
-### Add a trades data stream
+### Add a trade data stream
 ```python
 def on_trades(data):
     print("trade update - ", data)
@@ -249,7 +248,7 @@ stream.remove_candlesticks("ETHBTC", "1m")
 ```
 
 
-### Remove a trades data stream
+### Remove a trade data stream
 ```python
 stream.remove_trades("ETHBTC")
 ```
